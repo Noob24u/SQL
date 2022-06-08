@@ -29,72 +29,72 @@ WITH primary_cte AS (
     WHERE DATE_TRUNC(month,weekly_stock_availability.reporting_date::DATE) = DATE_TRUNC(month, variant_product_costs.month_start_date::DATE )
 )
 
-, sku_value_pw AS (
+, stock_value_pw AS (
      SELECT
-        brand,
-        sku,
-        available_stock,
-        reporting_week,
-        prod_cost,
-        year,
-        available_stock * prod_cost AS stock_value
-    FROM primary_tbl
+        primary_cte.brand,
+        primary_cte.sku,
+        primary_cte.available_stock,
+        primary_cte.reporting_week,
+        primary_cte.prod_cost,
+        primary_cte.year,
+        primary_cte.available_stock * primary_cte.prod_cost AS stock_value
+    FROM primary_cte
     WHERE reporting_week = DATE_TRUNC('week', current_date::DATE)
     GROUP BY 1, 2, 3, 4, 5, 6, 7
 )
 
-, sku_value_py AS (
+, stock_value_py AS (
     SELECT
-        brand,
-        sku,
-        available_stock,
-        reporting_week,
-        prod_cost,
-        year,
-        available_stock * prod_cost AS stock_value
-    FROM primary_tbl
+        primary_cte.brand,
+        primary_cte.sku,
+        primary_cte.available_stock,
+        primary_cte.reporting_week,
+        primary_cte.prod_cost,
+        primary_cte.year,
+        primary_cte.available_stock * primary_cte.prod_cost AS stock_value
+    FROM primary_cte
     WHERE reporting_week = DATEADD('week', -52, DATE_TRUNC('week', current_date::DATE))
     GROUP BY 1, 2, 3, 4, 5, 6, 7
 )
 
-, pw AS (
+, pw_stock AS (
     SELECT
-        brand,
+        sku_value_pw.brand,
         sku_value_pw.reporting_week,
         SUM(sku_value_pw.stock_value) AS inventory_pw_value
-    FROM sku_value_pw
+    FROM stock_value_pw
     GROUP BY 1, 2
 
 )
 
-, py AS (
+, py_stock AS (
     SELECT
-        brand,
+        sku_value_pw.brand,
         sku_value_py.reporting_week,
         SUM(sku_value_py.stock_value) AS inventory_py_value
-    FROM sku_value_py
+    FROM stock_value_py
     GROUP BY 1,2
 )
 
-, final_agg as (
+, pw_py_percent as (
 SELECT 
     pw.brand,
     py.inventory_py_value,
     pw.inventory_pw_value,
     DIV0(pw.inventory_pw_value, py.inventory_py_value) AS pw_py_stock,
     DIV0((pw.inventory_pw_value - py.inventory_py_value), py.inventory_py_value) as pw_py_percent
-FROM pw
+FROM pw_stock
     LEFT join py
         On pw.brand = py.brand
 GROUP by 1, 2, 3, 4, 5
 )
-, final_cal AS (
+, final_calculation AS (
 SELECT 
     brand,
     SUM(inventory_py_value) AS inventory_py_value,
     SUM(inventory_pw_value) AS inventory_pw_value,
     DIV0((SUM(inventory_pw_value) - SUM(inventory_py_value)), SUM(inventory_py_value)) as pw_py_percent
-    FROM final_agg
+    FROM pw_py_percent
 GROUP BY 1
 union all
 SELECT 
@@ -102,7 +102,7 @@ SELECT
     SUM(inventory_py_value) AS inventory_py_value,
     SUM(inventory_pw_value) AS inventory_pw_value,
     DIV0((SUM(inventory_pw_value) - SUM(inventory_py_value)), SUM(inventory_py_value)) as pw_py_percent
-FROM final_agg
+FROM pw_py_percent
 GROUP by 1
 )
 SELECT
@@ -110,4 +110,4 @@ SELECT
     -- ROUND(inventory_py_value, 0) as "p/Y this week",
     -- ROUND( inventory_pw_value, 0)  AS "On Current Week",
     pw_py_percent AS "Stock Growth"
-FROM final_cal
+FROM final_calculation
