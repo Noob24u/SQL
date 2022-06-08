@@ -1,15 +1,14 @@
 WITH primary_cte AS (
     SELECT 
-        weekly_stock_availability.brand,
-        DATE_TRUNC(week,weekly_stock_availability.reporting_date::DATE) AS reporting_week,
-        weekly_stock_availability.reporting_date::DATE AS reporting_date,
-        weekly_stock_availability.sku,
+        weekly_stock.brand,
+        DATE_TRUNC(week,weekly_stock.reporting_date::DATE) AS reporting_week,
+        weekly_stock.sku,
         Extract (year, reporting_date::DATE) as year,
-        weekly_stock_availability.quantity AS available_inventory,
+        weekly_stock.quantity AS available_stock,
         prod_cost.month_start_date::DATE as cost_date,
         prod_cost.cost AS prod_cost
     FROM dbt.prod_schema_brand1.prod_cost
-    LEFT JOIN dbt.prod_core_am.weekly_stock_availability
+    LEFT JOIN dbt.prod_schema_brand1.weekly_stock
         ON weekly_stock_availability.sku = variant_product_costs.sku
     WHERE DATE_TRUNC(month,weekly_stock_availability.reporting_date::DATE) = DATE_TRUNC(month, variant_product_costs.month_start_date::DATE )
     -- ORDER BY weekly_stock_availability.reporting_date::date DESC
@@ -17,16 +16,15 @@ WITH primary_cte AS (
     union all
     
     SELECT 
-        weekly_stock_availability.brand,
-        DATE_TRUNC(week,weekly_stock_availability.reporting_date::DATE) AS reporting_week,
-        weekly_stock_availability.reporting_date::DATE AS reporting_date,
-        weekly_stock_availability.sku,
+        weekly_stock.brand,
+        DATE_TRUNC(week,weekly_stock.reporting_date::DATE) AS reporting_week,
+        weekly_stock.sku,
         Extract (year, reporting_date::DATE) as year,
-        weekly_stock_availability.quantity AS available_inventory,
-        variant_product_costs.month_start_date::DATE as cost_date,
-        variant_product_costs.cost AS prod_cost
+        weekly_stock_availability.quantity AS available_stock,
+        prod_cost.month_start_date::DATE as cost_date,
+        prod_cost.cost AS prod_cost
     FROM dbt.prod_schema_brand2.prod_cost
-    LEFT JOIN dbt.prod_core_faynt.weekly_stock_availability
+    LEFT JOIN dbt.prod_schema_brand2.weekly_stock
         ON weekly_stock_availability.sku = variant_product_costs.sku
     WHERE DATE_TRUNC(month,weekly_stock_availability.reporting_date::DATE) = DATE_TRUNC(month, variant_product_costs.month_start_date::DATE )
 )
@@ -35,30 +33,30 @@ WITH primary_cte AS (
      SELECT
         brand,
         sku,
-        available_inventory,
+        available_stock,
         reporting_week,
-        reporting_date,
         prod_cost,
         year,
-        available_inventory * prod_cost AS stock_value
+        available_stock * prod_cost AS stock_value
     FROM primary_tbl
     WHERE reporting_week = DATE_TRUNC('week', current_date::DATE)
     GROUP BY 1, 2, 3, 4, 5, 6, 7
-    )
+)
+
 , sku_value_py AS (
     SELECT
         brand,
         sku,
-        available_inventory,
+        available_stock,
         reporting_week,
-        reporting_date,
         prod_cost,
         year,
-        available_inventory * prod_cost AS stock_value
+        available_stock * prod_cost AS stock_value
     FROM primary_tbl
     WHERE reporting_week = DATEADD('week', -52, DATE_TRUNC('week', current_date::DATE))
     GROUP BY 1, 2, 3, 4, 5, 6, 7
 )
+
 , pw AS (
     SELECT
         brand,
@@ -68,6 +66,7 @@ WITH primary_cte AS (
     GROUP BY 1, 2
 
 )
+
 , py AS (
     SELECT
         brand,
@@ -76,6 +75,7 @@ WITH primary_cte AS (
     FROM sku_value_py
     GROUP BY 1,2
 )
+
 , final_agg as (
 SELECT 
     pw.brand,
