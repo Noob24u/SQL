@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: zendesk
+    database: fivetran
+    schema: zendesk
+    description: >
+      Raw Zendesk Support data landed by the Fivetran Zendesk connector.
+      Loaded on a schedule; every field-level change on a ticket (status,
+      assignee, custom fields, etc.) is captured as its own row in
+      `ticket_field_history`, which is what most of the metrics in this
+      project are actually built from rather than from `ticket` alone.
+    tables:
+      - name: ticket
+        description: One row per ticket, current state only (not historized).
+      - name: ticket_field_history
+        description: >
+          Append-only log: one row per field change per ticket. The
+          workhorse table for this project -- status transitions, assignee
+          changes, and time-tracking custom fields are all read from here.
+      - name: ticket_field_option
+        description: Lookup of a custom dropdown field's raw value -> display name.
+      - name: ticket_form_history
+        description: Historized ticket form metadata (form name/display name over time).
+      - name: ticket_comment
+        description: Public and private comments/replies on a ticket, one row per comment.
+      - name: user
+        description: Zendesk users -- agents, admins, and end-users (requesters).
+      - name: "GROUP"
+        description: >
+          Zendesk support "groups" (queues). Quoted because GROUP is a
+          reserved SQL keyword. Group name encodes brand + country per the
+          support team's naming convention -- parsed in src_zendesk__groups.

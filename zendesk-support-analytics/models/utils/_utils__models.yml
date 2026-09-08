@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: utils__day_light_saving
+    description: >
+      Per calendar date, a 1/0 flag for whether EU daylight saving time is in
+      effect (last Sunday of March through last Sunday of October). Built to
+      support timezone-correct KPI calculations. Not currently referenced by
+      any other model in this repo -- see the note in the SQL file and the
+      README's "Known limitations" section.
+    columns:
+      - name: datum
+        tests:
+          - not_null

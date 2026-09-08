@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: src_zendesk__ticket
+    description: >
+      Staging model over the raw ticket table. Trimmed for this portfolio
+      repo -- see the note at the top of the SQL file for what was removed
+      and why.
+    columns:
+      - name: id
+        description: Zendesk ticket ID, primary key.
+        tests:
+          - unique
+          - not_null
+
+  - name: src_zendesk__ticket_field_history
+    description: One row per historized field change on a ticket.
+
+  - name: src_zendesk__ticket_field_option
+    description: Raw value -> human-readable name lookup for custom dropdown fields.
+
+  - name: src_zendesk__ticket_form_history
+    description: Historized ticket form name/display name, deduplicated to latest per form id.
+
+  - name: src_zendesk__ticket_comment
+    description: One row per ticket comment (public or internal).
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: src_zendesk__user
+    description: Zendesk users (agents, admins, end-users).
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      - name: role
+        description: "One of: end-user, agent, admin."
+        tests:
+          - accepted_values:
+              values: ['end-user', 'agent', 'admin']
+              config:
+                severity: warn
+
+  - name: src_zendesk__groups
+    description: >
+      Support group -> brand/country mapping, parsed from the group naming
+      convention (e.g. "Ava & May_DE" -> brand "am", country "DE"). Rows that
+      don't match a known naming pattern (e.g. internal "Marketing" or
+      "General" queues) are flagged brand/country = 'not_found' and are
+      filtered out downstream in the core ticket_metrics model.
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: src_zendesk__actions
+    description: Raw field-history rows for the "action taken" custom field(s).
+
+  - name: src_zendesk__contact_reason
+    description: Raw field-history rows for the primary contact-reason field (keyed off ticket_form_id).
+
+  - name: src_zendesk__secondary_reason
+    description: Raw field-history rows for the secondary contact-reason custom field(s).

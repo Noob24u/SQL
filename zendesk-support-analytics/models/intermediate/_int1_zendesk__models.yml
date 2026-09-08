@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: int1_zendesk__assignee_details
+    description: >
+      Per ticket: the last agent assigned, how many distinct agents were
+      assigned over the ticket's life (a proxy for hand-off churn), and when
+      the ticket was solved.
+    columns:
+      - name: ticket_id
+        tests:
+          - not_null
+
+  - name: int1_zendesk__contact_reason
+    description: Primary contact reason per ticket, joined from the ticket form name.
+
+  - name: int1_zendesk__secondary_contact_reason
+    description: Secondary (more granular) contact reason per ticket, ranked to latest.
+
+  - name: int1_zendesk__actions
+    description: The action taken to resolve the ticket, ranked to latest.
+
+  - name: int1_zendesk__contact_reasons_combined
+    description: >
+      Joins primary contact reason, secondary reason, and action into one row
+      per ticket. Secondary reason and action are deliberately nulled out for
+      specific contact-reason IDs where they don't apply / weren't collected
+      -- see the CASE WHEN logic for the exact ID list.
+
+  - name: int1_zendesk__country_brand_name
+    description: Maps a ticket to its brand/country via the group it was routed to.
+
+  - name: int1_zendesk__first_reply_time
+    description: >
+      First internal (agent/admin) and first external (end-user) comment
+      timestamp per ticket, split by commenter role so First Response Time
+      can be measured on the internal side specifically. Proactive-ticket
+      filtering is intentionally left to the core layer, since that's where
+      the full ticket context (channel, requester role) is available.
+
+  - name: int1_zendesk__full_resolution_times
+    description: >
+      Business-hours-adjusted resolution time. See the KNOWN LIMITATION note
+      at the top of the SQL file regarding DST and non-EU timezones.
+
+  - name: int1_zendesk__reply_count_metrics
+    description: >
+      Comment/touch counts per ticket, and the one-touch / two-touch
+      resolution flags (fewer than 2, or exactly 2, public agent replies).
+
+  - name: int1_zendesk__ticket_handling_time
+    description: Total agent handling time in seconds, summed from a Zendesk time-tracking custom field.
+
+  - name: int1_zendesk__user_details
+    description: Submitter (requester) name/role/alias/active flag per ticket.
+
+  - name: int1_zendesk__reason_for_contact
+    description: >
+      Alternate, comma-concatenated view of contact reason by ticket form.
+      Superseded by int1_zendesk__contact_reason for the core model but kept
+      as an example of an earlier iteration.

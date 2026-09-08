@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Care Analytics — Zendesk Support Metrics</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6; /* blue   - primary measure / brand A */
+    --series-2:       #eb6834; /* orange - brand B / segment 2 */
+    --series-3:       #1baf7a; /* aqua   - segment 3 */
+    --seq-100:        #cde2fb;
+    --seq-700:        #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .viz-root { background: var(--page); color: var(--text-primary); padding: 28px 20px 60px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  header.page-head { margin-bottom: 22px; }
+  header.page-head h1 { font-size: 21px; font-weight: 650; margin: 0 0 4px; }
+  header.page-head p { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase;
+           color: var(--series-1); background: color-mix(in srgb, var(--series-1) 14%, transparent);
+           border-radius: 4px; padding: 2px 7px; margin-bottom: 10px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 14px 12px; }
+  .stat-tile .label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 22px; font-weight: 650; line-height: 1.1; }
+  .stat-tile .sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px 14px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; font-weight: 650; margin: 0 0 2px; }
+  .card .card-sub { font-size: 12px; color: var(--text-secondary); margin: 0 0 12px; }
+
+  .row-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+
+  svg { display: block; overflow: visible; }
+  .axis-label { font-size: 10px; fill: var(--text-muted); }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .mark-label { font-size: 11px; fill: var(--text-secondary); }
+  .value-label { font-size: 11px; fill: var(--text-primary); font-weight: 600; }
+
+  .legend { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+  .tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1);
+             font-size: 11px; padding: 6px 9px; border-radius: 6px; line-height: 1.4; transform: translate(-50%, -110%);
+             white-space: nowrap; opacity: 0; transition: opacity .1s; z-index: 5; }
+  .chart-wrap { position: relative; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+  table.data-table th, table.data-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); }
+  table.data-table th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; }
+  table.data-table td.num, table.data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  details.table-toggle { margin-top: 10px; }
+  details.table-toggle > summary { cursor: pointer; font-size: 12px; color: var(--series-1); font-weight: 600; list-style: none; }
+  details.table-toggle > summary::-webkit-details-marker { display: none; }
+
+  footer.foot-note { font-size: 11.5px; color: var(--text-muted); margin-top: 18px; line-height: 1.6; border-top: 1px solid var(--border); padding-top: 14px; }
+
+  @media (max-width: 760px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .row-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <div class="wrap">
+
+    <header class="page-head">
+      <div class="badge">Illustrative / mock data</div>
+      <h1>Customer Care Analytics — Zendesk Support Metrics</h1>
+      <p>
+        Sample dashboard built on synthetic data, shaped to match the schema of
+        <code>core_all_brands__zendesk_ticket_metrics</code> and
+        <code>core_all_brands__zendesk_new_open_ticket_daily</code> in this repo.
+        The real production dashboards for this data lived in Mode Analytics / Metabase
+        and aren't accessible outside that company's account — this reconstructs the
+        same KPI set on made-up numbers so the metrics defined in the dbt models can be
+        seen visually.
+      </p>
+    </header>
+
+    <div class="stat-row" id="statRow"></div>
+
+    <div class="card">
+      <h2>New &amp; open tickets — last 30 days</h2>
+      <p class="card-sub">Daily count of tickets in "new" or "open" status, all brands combined.</p>
+      <div class="chart-wrap">
+        <svg id="lineChart" width="1040" height="220" viewBox="0 0 1040 220"></svg>
+        <div class="tooltip" id="lineTooltip"></div>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="card">
+        <h2>Tickets by contact reason</h2>
+        <p class="card-sub">Primary reason mapped from the ticket form, last 30 days.</p>
+        <div class="chart-wrap">
+          <svg id="reasonChart" width="500" height="230" viewBox="0 0 500 230"></svg>
+          <div class="tooltip" id="reasonTooltip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Resolution touch mix by brand</h2>
+        <p class="card-sub">Share of tickets resolved in 1, 2, or 3+ public agent replies.</p>
+        <div class="chart-wrap">
+          <svg id="touchChart" width="380" height="200" viewBox="0 0 380 200"></svg>
+          <div class="tooltip" id="touchTooltip"></div>
+        </div>
+        <div class="legend" id="touchLegend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Brand / country breakdown</h2>
+      <p class="card-sub">Core KPIs from <code>core_all_brands__zendesk_ticket_metrics</code>, last 30 days.</p>
+      <table class="data-table" id="brandTable"></table>
+    </div>
+
+    <footer class="foot-note">
+      Metric definitions: <strong>FRT</strong> (First Response Time) = time to first internal
+      comment on a non-proactive ticket · <strong>AHT</strong> (Avg. Handling Time) = agent time
+      actively worked on a ticket · <strong>Contact rate</strong> = tickets ÷ orders shipped in the
+      same period · <strong>1-touch resolution</strong> = solved in fewer than 2 public agent
+      replies. All figures on this page are synthetic and for illustration only.
+    </footer>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.querySelector('.viz-root');
+  var cs = getComputedStyle(root);
+  var c = function (name) { return cs.getPropertyValue(name).trim(); };
+
+  // ---------- mock data ----------
+  var stats = [
+    { label: 'Tickets (30d)', value: '8,420', sub: 'all brands' },
+    { label: 'Avg. FRT', value: '3.4 hrs', sub: 'first response' },
+    { label: 'Avg. AHT', value: '6.2 min', sub: 'handling time' },
+    { label: 'Contact rate', value: '4.8%', sub: 'per order shipped' },
+    { label: '1-touch resolution', value: '61%', sub: '< 2 agent replies' },
+    { label: 'Proactive tickets', value: '7%', sub: 'agent-initiated' }
+  ];
+
+  var days = [];
+  (function () {
+    var base = [420, 380, 260, 210, 430, 470, 400, 440, 300, 240, 460, 500, 410, 450,
+                310, 250, 480, 520, 430, 470, 330, 270, 500, 540, 450, 490, 350, 290, 510, 300];
+    var start = new Date(); start.setDate(start.getDate() - 29);
+    for (var i = 0; i < base.length; i++) {
+      var d = new Date(start); d.setDate(start.getDate() + i);
+      days.push({ date: d, value: base[i] });
+    }
+  })();
+
+  var reasons = [
+    { name: 'Order status', value: 2380 },
+    { name: 'Return / refund', value: 1860 },
+    { name: 'Product complaint', value: 1210 },
+    { name: 'Shipping delay', value: 980 },
+    { name: 'Account / login', value: 540 },
+    { name: 'Other', value: 450 }
+  ];
+
+  var brands = [
+    { brand: 'Ava & May', country: 'DE / AT / CH / FR / NL', tickets: 5120, frt: 3.1, aht: 5.8, oneTouch: 64, proactive: 6 },
+    { brand: 'faynt', country: 'DE / FR / NL', tickets: 3300, frt: 3.9, aht: 6.9, oneTouch: 57, proactive: 9 }
+  ];
+
+  var touchMix = [
+    { brand: 'Ava & May', oneTouch: 64, twoTouch: 22, multiTouch: 14 },
+    { brand: 'faynt', oneTouch: 57, twoTouch: 25, multiTouch: 18 }
+  ];
+
+  // ---------- stat tiles ----------
+  var statRow = document.getElementById('statRow');
+  stats.forEach(function (s) {
+    var tile = document.createElement('div');
+    tile.className = 'stat-tile';
+    tile.innerHTML = '<div class="label">' + s.label + '</div><div class="value">' + s.value + '</div><div class="sub">' + s.sub + '</div>';
+    statRow.appendChild(tile);
+  });
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // ---------- line chart ----------
+  (function () {
+    var svg = document.getElementById('lineChart');
+    var tip = document.getElementById('lineTooltip');
+    var W = 1040, H = 220, padL = 34, padR = 10, padT = 10, padB = 24;
+    var innerW = W - padL - padR, innerH = H - padT - padB;
+    var maxV = Math.max.apply(null, days.map(function (d) { return d.value; })) * 1.15;
+
+    var x = function (i) { return padL + (innerW * i) / (days.length - 1); };
+    var y = function (v) { return padT + innerH - (innerH * v) / maxV; };
+
+    [0.25, 0.5, 0.75, 1].forEach(function (f) {
+      var gy = padT + innerH * (1 - f);
+      svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: gy, y2: gy, class: 'gridline' }));
+      var lbl = el('text', { x: 4, y: gy + 3, class: 'axis-label' });
+      lbl.textContent = Math.round(maxV * f);
+      svg.appendChild(lbl);
+    });
+    svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: padT + innerH, y2: padT + innerH, class: 'baseline' }));
+
+    var pathD = days.map(function (d, i) { return (i === 0 ? 'M' : 'L') + x(i) + ' ' + y(d.value); }).join(' ');
+    svg.appendChild(el('path', { d: pathD, fill: 'none', stroke: c('--series-1'), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+    var areaD = pathD + ' L' + x(days.length - 1) + ' ' + (padT + innerH) + ' L' + x(0) + ' ' + (padT + innerH) + ' Z';
+    svg.appendChild(el('path', { d: areaD, fill: c('--series-1'), opacity: 0.08 }));
+
+    days.forEach(function (d, i) {
+      if (i % 5 === 0 || i === days.length - 1) {
+        var lbl = el('text', { x: x(i), y: H - 4, class: 'axis-label', 'text-anchor': 'middle' });
+        lbl.textContent = (d.date.getMonth() + 1) + '/' + d.date.getDate();
+        svg.appendChild(lbl);
+      }
+    });
+
+    var hoverLine = el('line', { x1: 0, x2: 0, y1: padT, y2: padT + innerH, stroke: c('--baseline'), 'stroke-width': 1, opacity: 0 });
+    svg.appendChild(hoverLine);
+    var hoverDot = el('circle', { r: 4, fill: c('--series-1'), stroke: c('--surface-1'), 'stroke-width': 2, opacity: 0 });
+    svg.appendChild(hoverDot);
+
+    var hitW = innerW / (days.length - 1);
+    days.forEach(function (d, i) {
+      var hit = el('rect', { x: x(i) - hitW / 2, y: padT, width: hitW, height: innerH, fill: 'transparent' });
+      hit.addEventListener('mouseenter', function () {
+        hoverLine.setAttribute('x1', x(i)); hoverLine.setAttribute('x2', x(i)); hoverLine.setAttribute('opacity', 1);
+        hoverDot.setAttribute('cx', x(i)); hoverDot.setAttribute('cy', y(d.value)); hoverDot.setAttribute('opacity', 1);
+        var rect = svg.getBoundingClientRect();
+        tip.style.left = (rect.left + x(i)) + 'px';
+        tip.style.top = (rect.top + y(d.value) + window.scrollY) + 'px';
+        tip.textContent = (d.date.getMonth() + 1) + '/' + d.date.getDate() + ' — ' + d.value + ' tickets';
+        tip.style.opacity = 1;
+      });
+      hit.addEventListener('mouseleave', function () {
+        hoverLine.setAttribute('opacity', 0); hoverDot.setAttribute('opacity', 0); tip.style.opacity = 0;
+      });
+      svg.appendChild(hit);
+    });
+  })();
+
+  // ---------- contact reason bar chart (single measure -> sequential blue) ----------
+  (function () {
+    var svg = document.getElementById('reasonChart');
+    var tip = document.getElementById('reasonTooltip');
+    var W = 500, H = 230, padL = 130, padR = 46, padT = 6, padB = 6;
+    var barH = 22, gap = 12;
+    var maxV = Math.max.apply(null, reasons.map(function (r) { return r.value; }));
+    var innerW = W - padL - padR;
+
+    reasons.forEach(function (r, i) {
+      var yTop = padT + i * (barH + gap);
+      var w = (innerW * r.value) / maxV;
+
+      var label = el('text', { x: padL - 10, y: yTop + barH / 2 + 4, class: 'mark-label', 'text-anchor': 'end' });
+      label.textContent = r.name;
+      svg.appendChild(label);
+
+      var bg = el('rect', { x: padL, y: yTop, width: innerW, height: barH, rx: 4, fill: c('--grid'), opacity: 0.5 });
+      svg.appendChild(bg);
+
+      var bar = el('rect', { x: padL, y: yTop, width: w, height: barH, rx: 4, fill: c('--series-1') });
+      svg.appendChild(bar);
+
+      var val = el('text', { x: padL + w + 8, y: yTop + barH / 2 + 4, class: 'value-label' });
+      val.textContent = r.value.toLocaleString();
+      svg.appendChild(val);
+
+      var hit = el('rect', { x: 0, y: yTop, width: W, height: barH, fill: 'transparent' });
+      hit.addEventListener('mouseenter', function (ev) {
+        bar.setAttribute('opacity', 0.82);
+        var rect = svg.getBoundingClientRect();
+        tip.style.left = (rect.left + padL + w / 2) + 'px';
+        tip.style.top = (rect.top + yTop + window.scrollY) + 'px';
+        var pct = ((r.value / reasons.reduce(function (a, b) { return a + b.value; }, 0)) * 100).toFixed(0);
+        tip.textContent = r.name + ' — ' + r.value.toLocaleString() + ' tickets (' + pct + '%)';
+        tip.style.opacity = 1;
+      });
+      hit.addEventListener('mouseleave', function () { bar.setAttribute('opacity', 1); tip.style.opacity = 0; });
+      svg.appendChild(hit);
+    });
+  })();
+
+  // ---------- touch-mix stacked bar (categorical, 3 segments x 2 brands) ----------
+  (function () {
+    var svg = document.getElementById('touchChart');
+    var tip = document.getElementById('touchTooltip');
+    var W = 380, H = 200, padL = 90, padR = 16, padT = 10, padB = 10;
+    var barH = 34, gap = 34;
+    var innerW = W - padL - padR;
+    var segColors = [c('--series-1'), c('--series-2'), c('--series-3')];
+    var segKeys = ['oneTouch', 'twoTouch', 'multiTouch'];
+    var segNames = ['1 touch', '2 touch', '3+ touch'];
+
+    touchMix.forEach(function (row, ri) {
+      var yTop = padT + ri * (barH + gap);
+      var label = el('text', { x: padL - 10, y: yTop + barH / 2 + 4, class: 'mark-label', 'text-anchor': 'end' });
+      label.textContent = row.brand;
+      svg.appendChild(label);
+
+      var xCur = padL;
+      segKeys.forEach(function (key, si) {
+        var v = row[key];
+        var w = (innerW * v) / 100 - 2; // 2px surface gap between segments
+        var seg = el('rect', { x: xCur, y: yTop, width: Math.max(w, 0), height: barH, rx: 3, fill: segColors[si] });
+        svg.appendChild(seg);
+
+        if (w > 26) {
+          var lbl = el('text', { x: xCur + w / 2, y: yTop + barH / 2 + 4, 'text-anchor': 'middle', fill: '#fff', 'font-size': 11, 'font-weight': 600 });
+          lbl.textContent = v + '%';
+          svg.appendChild(lbl);
+        }
+
+        var hit = el('rect', { x: xCur, y: yTop, width: Math.max(w, 0), height: barH, fill: 'transparent' });
+        hit.addEventListener('mouseenter', function () {
+          seg.setAttribute('opacity', 0.82);
+          var rect = svg.getBoundingClientRect();
+          tip.style.left = (rect.left + xCur + w / 2) + 'px';
+          tip.style.top = (rect.top + yTop + window.scrollY) + 'px';
+          tip.textContent = row.brand + ' — ' + segNames[si] + ': ' + v + '%';
+          tip.style.opacity = 1;
+        });
+        hit.addEventListener('mouseleave', function () { seg.setAttribute('opacity', 1); tip.style.opacity = 0; });
+        svg.appendChild(hit);
+
+        xCur += w + 2;
+      });
+    });
+
+    var legend = document.getElementById('touchLegend');
+    segNames.forEach(function (name, i) {
+      var item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = '<span class="legend-swatch" style="background:' + segColors[i] + '"></span>' + name;
+      legend.appendChild(item);
+    });
+  })();
+
+  // ---------- brand table ----------
+  (function () {
+    var table = document.getElementById('brandTable');
+    var thead = '<thead><tr><th>Brand</th><th>Countries</th><th class="num">Tickets</th><th class="num">Avg FRT</th><th class="num">Avg AHT</th><th class="num">1-touch</th><th class="num">Proactive</th></tr></thead>';
+    var rows = brands.map(function (b) {
+      return '<tr><td>' + b.brand + '</td><td>' + b.country + '</td><td class="num">' + b.tickets.toLocaleString() +
+        '</td><td class="num">' + b.frt + ' hrs</td><td class="num">' + b.aht + ' min</td><td class="num">' + b.oneTouch +
+        '%</td><td class="num">' + b.proactive + '%</td></tr>';
+    }).join('');
+    table.innerHTML = thead + '<tbody>' + rows + '</tbody>';
+  })();
+})();
+</script>
+</body>
+</html>
