@@ -149,25 +149,7 @@ see the live version linked at the top of this README.
   tests) rather than exhaustive, to keep this repo focused on the modeling
   logic itself.
 
-## Bugs fixed while preparing this repo
 
-Two issues in `core_all_brands__zendesk_ticket_metrics.sql` were fixed here
-(the originals are preserved in the "what changed" note in that file's SQL
-comments, and in this README, rather than silently disappearing):
-
-1. **`LEFT JOiN` typo** on the `user_details` join — cosmetic, but broken
-   capitalization like this is exactly what a linter (or `sqlfluff`) would
-   catch; there's no CI on the original project, which is itself a known gap.
-2. **Assignee-name lookup drove from the wrong side of the join.** The
-   original built the ticket → agent-name lookup as `FROM zendesk_assignee_names_seed
-   LEFT JOIN int1_zendesk__assignee_details`, with `COALESCE(names_seed.assignee_name,
-   'names_seed.assignee_id')` — a quoted string literal, not the column it
-   looks like it's meant to be. Two consequences: any ticket whose assignee
-   wasn't already present in the manually maintained seed was silently
-   dropped from the lookup (not just unnamed — *missing*), and the intended
-   fallback to the raw ID never actually fired. Fixed by driving from
-   `int1_zendesk__assignee_details` (so every ticket is preserved) and
-   coalescing to the real `assignee_details.last_assigned` column.
 
 ## What was changed for this repo
 
@@ -177,8 +159,7 @@ This is real code, lightly redacted for a public repo rather than rewritten:
   handling-time tracking field) are replaced with the placeholder
   `360000000000` and documented inline with what the real field represents.
 - `src_zendesk__ticket.sql` originally selected 90+ `custom_*` columns —
-  effectively a fingerprint of the business's exact product catalog (candle
-  components, diffuser components, room spray, etc.). This copy keeps a
+  effectively a fingerprint of the business's exact product catalog. This copy keeps a
   representative subset; nothing downstream in this repo depends on the
   trimmed columns.
 - Seed data (`zendesk_assignee_names_seed.csv`) is fully synthetic — no real
@@ -191,18 +172,4 @@ This is real code, lightly redacted for a public repo rather than rewritten:
 
 This project reads from a Snowflake warehouse populated by Fivetran's
 Zendesk connector (`fivetran.zendesk.*`) — it isn't runnable standalone
-without that source. To explore the SQL and lineage without a warehouse
-connection:
-
-```bash
-dbt parse          # validates the DAG compiles
-dbt docs generate && dbt docs serve   # browsable lineage graph + column docs
-```
-
-With a connected warehouse:
-
-```bash
-dbt seed            # loads the synthetic seeds
-dbt run
-dbt test
-```
+without that source. 
