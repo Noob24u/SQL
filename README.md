@@ -18,8 +18,3 @@ built on synthetic data.
 
 **Stack:** dbt, Snowflake, Fivetran.
 
-### [`inventory_growth.sql`](inventory_growth.sql)
-
-A supply-chain query calculating week-over-week and year-over-year stock
-value growth by brand/SKU, from weekly stock snapshots and product cost
-data.
