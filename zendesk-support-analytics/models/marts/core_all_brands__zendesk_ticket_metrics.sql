@@ -4,15 +4,6 @@
     )
 }}
 
--- BUGFIX (see README "Bugs fixed while preparing this repo"): the assignee-name
--- lookup used to drive FROM the seed table (zendesk_assignee_names_seed) and
--- LEFT JOIN into int1_zendesk__assignee_details, with a COALESCE fallback to
--- the *string literal* 'names_seed.assignee_id' instead of the column. That
--- meant (a) any ticket whose assignee wasn't already present in the seed was
--- silently dropped from this CTE entirely, and (b) the fallback never worked
--- even when it should have. Fixed by driving FROM assignee_details (so every
--- ticket is preserved) and falling back to the real assignee_id column when
--- no human-readable name exists in the seed.
 WITH assigee_name AS (
     SELECT
         assignee_details.ticket_id,
