@@ -29,7 +29,7 @@ operations. This repo scopes to the customer care / Zendesk piece.
 ## Problem this solves
 
 Zendesk's own reporting answers "how many tickets are open." It doesn't
-answer "is Ava & May's German queue missing SLA because of one agent's
+answer "is Brand1's German queue missing SLA because of one agent's
 backlog" or "which contact reason is driving repeat contacts this month" —
 that requires joining ticket state, field-change history, comment activity,
 and a business-hours calendar together, and doing it consistently across
@@ -183,7 +183,7 @@ This is real code, lightly redacted for a public repo rather than rewritten:
   trimmed columns.
 - Seed data (`zendesk_assignee_names_seed.csv`) is fully synthetic — no real
   employee names.
-- Brand names (Ava & May, faynt), the `fivetran.zendesk` source schema, and
+- Brand names (Brand1, Brand2), the `fivetran.zendesk` source schema, and
   the country/business logic are left as-is; they aren't sensitive on their
   own without the data behind them.
 
