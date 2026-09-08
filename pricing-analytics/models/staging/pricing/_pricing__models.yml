@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: src_gcs_amazon__order_lines
+    description: >
+      Light typing/renaming of the raw Amazon order line export. Buyer PII
+      (email, name, phone) and full ship-to/bill-to address fields on the
+      raw source are dropped here, not carried forward at all -- see the
+      project README.
+  - name: src_gsheets__variant_product_costs_amazon
+    description: >
+      Unpivots the wide monthly-cost sheet for the Amazon channel into one
+      row per SKU per month. See the note in this file's SQL re: a WHERE
+      clause difference vs. the brand1/brand2 versions of this pattern in
+      the Supply Chain Analytics project.
+  - name: src_gsheets__variant_product_costs_brand1
+    description: Same unpivot pattern, brand1's base landed cost (duplicated from the Supply Chain Analytics project so this repo is self-contained).

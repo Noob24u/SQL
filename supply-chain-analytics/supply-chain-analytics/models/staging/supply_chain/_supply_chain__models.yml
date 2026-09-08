@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: src_gsheets__weekly_stock_availability_brand1
+    description: Light typing/renaming of the raw weekly stock overview sheet, brand 1. German source column names (artikel = item/SKU, sum_bestand_ = total stock) preserved as-is.
+  - name: src_gsheets__weekly_stock_availability_brand2
+    description: Same as brand 1's, brand 2.
+
+  - name: src_gsheets__stock_plan_brand1
+    description: Light typing/renaming of the raw stock plan sheet, brand 1.
+  - name: src_gsheets__stock_plan_brand2
+    description: Same as brand 1's, brand 2.
+
+  - name: src_gsheets__stock_received_brand1
+    description: >
+      Light typing/renaming of the raw supplier purchase order sheet, brand
+      1. Dates are stored as ddmmyyyy strings in the sheet; try_to_date
+      avoids hard failures on malformed entries. Carries vendor_name and
+      vendor_country (real supplier data) -- flagged in the project README
+      under "What to review before this goes fully public."
+  - name: src_gsheets__stock_received_brand2
+    description: Same as brand 1's, brand 2.
+
+  - name: src_gsheets__month_beginning_on_hand_stock_brand1
+    description: >
+      Light typing/renaming of the raw beginning-of-month stock sheet, brand
+      1. Unlike every other staging model in this project, the source sheet
+      itself has no brand column -- 'brand1' is added here rather than read
+      from the source.
+  - name: src_gsheets__month_beginning_on_hand_stock_brand2
+    description: Same as brand 1's, brand 2.
+
+  - name: src_gsheets__variant_product_costs_brand1
+    description: >
+      Unpivots the wide monthly-cost sheet (one column per month, e.g.
+      `_2024_01_01`) into one row per SKU per month, using
+      OBJECT_CONSTRUCT_KEEP_NULL + LATERAL FLATTEN so new month columns
+      don't require a model change. See the sibling
+      core_amazon__variant_product_costs staging model for the same pattern
+      applied to the Amazon-channel cost sheet -- that one's WHERE clause
+      omits 'PRODUCT_NAME' from the exclusion list where this one (and
+      brand2's) includes it, worth checking whether that's an intentional
+      difference in sheet shape or a copy/paste gap next time that model's
+      touched.
+  - name: src_gsheets__variant_product_costs_brand2
+    description: Same pattern as brand 1's.

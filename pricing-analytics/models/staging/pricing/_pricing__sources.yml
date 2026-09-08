@@ -1,0 +1,38 @@
+version: 2
+
+sources:
+  - name: amazon
+    database: gcs
+    schema: amazon
+    description: >
+      Raw Amazon Seller Central data landed via a GCS export/ingest job
+      (not Fivetran, unlike the gsheets source below). One row per order
+      line item as reported by Amazon.
+    tables:
+      - name: order_lines
+        description: >
+          One row per order line item per shipment. Buyer PII (name,
+          email, phone) and full ship-to/bill-to address fields exist on
+          the raw source but are dropped at the staging layer in this
+          repo -- see the project README.
+
+  - name: gsheets
+    database: fivetran
+    schema: gsheets
+    description: >
+      Manually maintained Google Sheets landed by Fivetran's Sheets
+      connector -- product cost sheets, same source family used in the
+      Supply Chain Analytics project in this repo.
+    tables:
+      - name: product_cost_amazon
+        description: >
+          Landed cost per SKU per month, Amazon-channel-specific pricing
+          (packaging/prep can differ from the brand's direct-to-consumer
+          cost). Wide/pivoted sheet, unpivoted in
+          src_gsheets__variant_product_costs_amazon.
+      - name: product_cost_brand1
+        description: >
+          Landed cost per SKU per month, brand1's direct/base cost
+          (same source table used in the Supply Chain Analytics project).
+          Amazon-channel order margin uses BOTH this and
+          product_cost_amazon -- see core_amazon__order_lines.

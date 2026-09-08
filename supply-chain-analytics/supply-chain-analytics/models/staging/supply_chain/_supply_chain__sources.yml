@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: gsheets
+    database: fivetran
+    schema: gsheets
+    description: >
+      Manually maintained Google Sheets (warehouse ops and finance teams)
+      landed by Fivetran's Google Sheets connector. These are
+      spreadsheet-of-record inputs -- weekly stock counts, purchase orders,
+      and product cost sheets -- rather than data from a transactional
+      system, so schema drift (a new column appearing every month) is
+      expected and handled explicitly in the product-cost models below.
+    tables:
+      - name: weekly_stock_overview_brand1
+        description: Weekly snapshot of on-hand stock quantity per SKU, brand 1.
+      - name: weekly_stock_overview_brand2
+        description: Weekly snapshot of on-hand stock quantity per SKU, brand 2.
+      - name: stock_plan_brand1
+        description: Monthly planned/target stock quantity per SKU, brand 1.
+      - name: stock_plan_brand2
+        description: Monthly planned/target stock quantity per SKU, brand 2.
+      - name: supplier_pos_brand1
+        description: Supplier purchase orders (inbound stock on order/received) per SKU, brand 1.
+      - name: supplier_pos_brand2
+        description: Supplier purchase orders (inbound stock on order/received) per SKU, brand 2.
+      - name: month_beginning_on_hand_stock_brand1
+        description: >
+          Starting inventory quantity per SKU as of the beginning of each
+          month, brand 1. Does not include inventory tied up in open orders.
+      - name: month_beginning_on_hand_stock_brand2
+        description: Same as above, brand 2.
+      - name: product_cost_brand1
+        description: >
+          Landed cost per SKU per month, brand 1. A wide/pivoted sheet --
+          one column per month -- because a new month's cost column is
+          added by hand each month instead of the sheet being reshaped.
+          See `src_gsheets__variant_product_costs_brand1` for how this gets
+          unpivoted into one row per SKU per month.
+      - name: product_cost_brand2
+        description: Same shape as brand 1's product cost sheet.

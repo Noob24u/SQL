@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: core_amazon__variant_product_costs
+    description: Landed cost per SKU per month, Amazon-channel-specific. Thin passthrough of the staging model.
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: core_brand1__variant_product_costs
+    description: >
+      Landed cost per SKU per month, brand1's direct/base cost. Same model
+      as the Supply Chain Analytics project's copy -- duplicated here so
+      this project is self-contained rather than reaching across repos.
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: core_amazon__order_lines
+    description: >
+      One row per Amazon order line item for brand1, with commission,
+      landed cost, and FBA fee computed per line. Presentation-layer-ish,
+      but still line-item grain -- core_pricing__amazon_sku_margin is the
+      one an analyst or dashboard should actually query for a margin
+      number. Buyer PII and address columns present in the original
+      production model are not present here at all (dropped at staging).
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      - name: sku
+        tests:
+          - not_null
+
+  - name: core_pricing__amazon_sku_margin
+    description: >
+      The actual margin/profitability model: one row per brand + SKU +
+      country + month, with units sold, net revenue, landed cost,
+      commission, FBA fee, contribution margin, and contribution margin %.
+      Does not include freight/palletizing logistics cost -- see the model
+      SQL comment and the README's known limitations.
+    columns:
+      - name: sku
+        tests:
+          - not_null
+      - name: contribution_margin_pct
+        description: >
+          contribution_margin / net_revenue. DIV0-guarded -- a SKU with
+          zero net revenue in a month (e.g. fully refunded) returns 0
+          instead of erroring, so a null here always means no rows, never
+          a division error.

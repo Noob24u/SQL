@@ -1,0 +1,93 @@
+version: 2
+
+models:
+  - name: core_brand1__weekly_stock_availability
+    description: Weekly on-hand stock quantity per SKU, brand 1. Thin passthrough of the staging model.
+    columns:
+      - name: brand
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['brand1']
+      - name: sku
+        tests:
+          - not_null
+
+  - name: core_brand2__weekly_stock_availability
+    description: >
+      Weekly on-hand stock quantity per SKU, brand 2. Added for this repo --
+      mirrors core_brand1__weekly_stock_availability's shape; the original
+      codebase only had this core layer built for brand 1.
+    columns:
+      - name: brand
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['brand2']
+      - name: sku
+        tests:
+          - not_null
+
+  - name: core_brand1__stock_plan
+    description: Monthly planned/target stock quantity per SKU, brand 1.
+
+  - name: core_brand2__stock_plan
+    description: Monthly planned/target stock quantity per SKU, brand 2. Added for this repo.
+
+  - name: core_brand1__stock_received
+    description: >
+      Supplier purchase orders (inbound stock), brand 1. planning_month is
+      derived from order_date, not delivery_date -- so a PO placed in March
+      but delivered in April is bucketed to March.
+    columns:
+      - name: order_number
+        tests:
+          - not_null
+
+  - name: core_brand2__stock_received
+    description: Same as core_brand1__stock_received, brand 2. Added for this repo.
+
+  - name: core_brand1__variant_product_costs
+    description: >
+      Landed cost per SKU per month, brand 1. Added for this repo -- mirrors
+      core_amazon__variant_product_costs's shape (a thin passthrough) so
+      inventory_growth has a proper model to ref() instead of an ad hoc
+      schema reference.
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: core_brand2__variant_product_costs
+    description: Same as core_brand1__variant_product_costs, brand 2. Added for this repo.
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: core_supply_chain__month_beginning_on_hand_stock
+    description: >
+      Starting inventory quantity per SKU as of the beginning of each month,
+      both brands combined. Doesn't include inventory tied up in open
+      orders. The source sheets for this one carry no brand column at all
+      (unlike every other source in this project) -- brand is added in the
+      staging layer instead of here, see the NOTE in
+      src_gsheets__month_beginning_on_hand_stock_brand1/2.sql.
+
+  - name: core_supply_chain__inventory_growth
+    description: >
+      Year-over-year stock value growth by brand: this week's on-hand stock
+      value vs. the same week 52 weeks ago, where stock value = quantity on
+      hand x landed cost per SKU. This is the model that was hand-pasted in
+      as a raw, broken query and rebuilt here -- see the project README's
+      "Bugs fixed" section for the full list of what was wrong with it.
+    columns:
+      - name: brand
+        description: Brand, or 'Total' for the combined row across both brands.
+      - name: "Stock Growth"
+        description: >
+          (this week's stock value - stock value 52 weeks ago) / stock value
+          52 weeks ago. DIV0-guarded, so a zero prior-year base returns 0
+          instead of erroring.
