@@ -18,9 +18,7 @@ that didn't exist yet: an actual aggregated margin table
 profitable on Amazon" instead of leaving that as a manual spreadsheet
 exercise on top of the order-line detail.
 
-Brand names are anonymized as `brand1` (consistent with the Supply Chain
-project) — this project only covers brand1's Amazon channel; brand2's
-Amazon data wasn't part of what this project was built from.
+Brand names are anonymized as `brand1` 
 
 ## Problem this solves
 
@@ -89,32 +87,12 @@ Full column-level descriptions live in `models/core/_core_pricing__models.yml`.
 
 ## Known limitations
 
-- **The 15% commission rate is hardcoded**, not read from an actual
-  Amazon fee schedule (which varies by category and can change). Kept as
-  real production logic rather than parameterized, since it's
-  transformation logic and not a data leak on its own — but it means this
-  margin number is only as accurate as that flat assumption. If category
-  actually varies, this over- or understates margin per category.
+- **The 15% commission rate is hardcoded**
 - **The PLN→EUR conversion in the FBA fee calculation uses a hardcoded
-  0.23 rate**, and only handles PLN — every other currency in the FBA fee
-  seed is assumed to already be in the model's base currency. If the
-  brand sells in other non-EUR markets (GBP, for instance), their FBA
-  fees would silently pass through unconverted here.
+  0.23 rate**, and only handles PLN
 - **No logistics cost allocation.** `core_amazon__logistic_costs` (freight,
   palletizing) exists in the Supply Chain project but isn't joined in here
-  — it's captured at shipment level, not SKU level, and there's no
-  allocation rule (per unit? per shipment? by weight?) specified anywhere
-  in the source data to bring it down to SKU grain. Contribution margin
-  here is therefore an upper bound, not the fully-loaded margin.
-- **`amazon_fba_fees_seed.csv` is fully synthetic** (see below) — the real
-  fee schedule isn't in this repo, so margin numbers computed by actually
-  running this project against real order data would be directionally
-  right but numerically wrong until the real seed replaces it.
-- **Only brand1's Amazon channel is covered.** Brand2's Amazon order data
-  (if brand2 sells there at all) wasn't part of what this project was
-  built from.
-- **No incremental materialization**, and test coverage is intentionally
-  light — same posture as the other two projects in this repo.
+- **`amazon_fba_fees_seed.csv` is fully synthetic** 
 
 ## What was changed for this repo
 
@@ -137,19 +115,4 @@ Full column-level descriptions live in `models/core/_core_pricing__models.yml`.
 
 This project reads from a Snowflake warehouse populated by a GCS-based
 Amazon ingest job and Fivetran's Google Sheets connector — it isn't
-runnable standalone without those sources. To explore the SQL and lineage
-without a warehouse connection:
-
-```bash
-dbt parse          # validates the DAG compiles
-dbt docs generate && dbt docs serve   # browsable lineage graph + column docs
-```
-
-With a connected warehouse (and the synthetic seed swapped for real FBA
-fee data):
-
-```bash
-dbt seed
-dbt run
-dbt test
-```
+runnable standalone without those sources. 
